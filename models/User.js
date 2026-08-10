@@ -24,21 +24,9 @@ const userSchema = new mongoose.Schema({
         required: true
     },
 
-    files: {
-        "2.127": {
-            type: Boolean,
-            default: false
-        },
-
-        "CDNICON": {
-            type: Boolean,
-            default: false
-        },
-
-        "files": {
-            type: Boolean,
-            default: false
-        }
+    enabled: {
+        type: Boolean,
+        default: false
     }
 
 }, {
