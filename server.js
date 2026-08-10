@@ -79,7 +79,7 @@ app.post("/api/login", async (req, res) => {
 
         }
 
-        if (new Date() > user.expiresAt) {
+        if (!user.expiresAt || new Date() > user.expiresAt) {
 
             return res.status(403).json({
                 success: false,
@@ -106,7 +106,7 @@ app.post("/api/login", async (req, res) => {
             success: true,
             message: "ورود موفق",
             expiresAt: user.expiresAt,
-            files: user.files
+            enabled: user.enabled
         });
 
     } catch (err) {
@@ -123,7 +123,12 @@ app.post("/api/login", async (req, res) => {
 });
 
 
-// ================= User File Status =================
+// ================= File Status =================
+//
+// set1 = مجموعه اول
+// set2 = مجموعه دوم
+// set3 = مجموعه سوم
+//
 
 app.get("/api/files/status/:username", async (req, res) => {
 
@@ -144,10 +149,12 @@ app.get("/api/files/status/:username", async (req, res) => {
 
         res.json({
             success: true,
-            files: user.files
+            enabled: user.enabled
         });
 
     } catch (err) {
+
+        console.log(err);
 
         res.status(500).json({
             success: false,
@@ -160,6 +167,10 @@ app.get("/api/files/status/:username", async (req, res) => {
 
 
 // ================= Change File Status =================
+//
+// file = set1 / set2 / set3
+// enabled = true / false
+//
 
 app.post("/api/files/status", async (req, res) => {
 
@@ -171,17 +182,17 @@ app.post("/api/files/status", async (req, res) => {
             enabled
         } = req.body;
 
-        const allowedFiles = [
-            "2.127",
-            "CDNICON",
-            "files"
+        const allowedSets = [
+            "set1",
+            "set2",
+            "set3"
         ];
 
-        if (!allowedFiles.includes(file)) {
+        if (!username || !allowedSets.includes(file)) {
 
             return res.status(400).json({
                 success: false,
-                message: "نام فایل نامعتبر است"
+                message: "اطلاعات نامعتبر"
             });
 
         }
@@ -199,13 +210,13 @@ app.post("/api/files/status", async (req, res) => {
 
         }
 
-        user.files[file] = Boolean(enabled);
+        user.enabled[file] = Boolean(enabled);
 
         await user.save();
 
         res.json({
             success: true,
-            files: user.files
+            enabled: user.enabled
         });
 
     } catch (err) {
@@ -261,7 +272,7 @@ app.post("/api/admin/users", checkAdmin, async (req, res) => {
             10
         );
 
-        let expires = new Date();
+        const expires = new Date();
 
         expires.setDate(
             expires.getDate() + Number(days)
@@ -270,7 +281,13 @@ app.post("/api/admin/users", checkAdmin, async (req, res) => {
         const user = new User({
             username,
             password: hash,
-            expiresAt: expires
+            expiresAt: expires,
+
+            enabled: {
+                set1: false,
+                set2: false,
+                set3: false
+            }
         });
 
         await user.save();
@@ -280,9 +297,9 @@ app.post("/api/admin/users", checkAdmin, async (req, res) => {
             message: "کاربر ساخته شد"
         });
 
-    } catch (e) {
+    } catch (err) {
 
-        console.log(e);
+        console.log(err);
 
         res.status(500).json({
             success: false,
@@ -314,8 +331,11 @@ app.delete(
 
         } catch (err) {
 
+            console.log(err);
+
             res.status(500).json({
-                success: false
+                success: false,
+                message: "خطای سرور"
             });
 
         }
@@ -324,7 +344,7 @@ app.delete(
 );
 
 
-// ================= Admin Users =================
+// ================= Admin Users List =================
 
 app.get(
     "/api/admin/users",
@@ -344,6 +364,56 @@ app.get(
             });
 
         } catch (err) {
+
+            console.log(err);
+
+            res.status(500).json({
+                success: false,
+                message: "خطای سرور"
+            });
+
+        }
+
+    }
+);
+
+
+// ================= Activate / Deactivate User =================
+
+app.post(
+    "/api/admin/users/:username/active",
+    checkAdmin,
+    async (req, res) => {
+
+        try {
+
+            const { active } = req.body;
+
+            const user = await User.findOne({
+                username: req.params.username
+            });
+
+            if (!user) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "کاربر پیدا نشد"
+                });
+
+            }
+
+            user.active = Boolean(active);
+
+            await user.save();
+
+            res.json({
+                success: true,
+                active: user.active
+            });
+
+        } catch (err) {
+
+            console.log(err);
 
             res.status(500).json({
                 success: false
