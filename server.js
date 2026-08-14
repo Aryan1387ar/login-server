@@ -26,10 +26,10 @@ mongoose
 
 app.post("/api/admin/login", (req, res) => {
 
-    const { username, password } = req.body;
+    const { password } = req.body;
 
     if (
-        username === process.env.ADMIN_USERNAME &&
+        password &&
         password === process.env.ADMIN_PASSWORD
     ) {
 
@@ -42,11 +42,10 @@ app.post("/api/admin/login", (req, res) => {
 
     return res.status(401).json({
         success: false,
-        message: "نام کاربری یا رمز مدیریت اشتباه است"
+        message: "رمز مدیریت اشتباه است"
     });
 
 });
-
 // ================= Admin Check =================
 
 function checkAdmin(req, res, next) {
