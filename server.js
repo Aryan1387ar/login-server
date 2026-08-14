@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const User = require("./models/User");
 
@@ -21,6 +22,7 @@ mongoose
     .connect(process.env.MONGODB_URI)
     .then(() => console.log("Connected to MongoDB"))
     .catch(err => console.log("MongoDB Error:", err));
+
 
 // ================= Admin Login =================
 
@@ -46,6 +48,8 @@ app.post("/api/admin/login", (req, res) => {
     });
 
 });
+
+
 // ================= Admin Check =================
 
 function checkAdmin(req, res, next) {
@@ -62,6 +66,7 @@ function checkAdmin(req, res, next) {
     }
 
     next();
+
 }
 
 
@@ -128,6 +133,7 @@ app.post("/api/login", async (req, res) => {
         res.json({
             success: true,
             message: "ورود موفق",
+            username: user.username,
             expiresAt: user.expiresAt,
             enabled: user.enabled
         });
@@ -139,6 +145,107 @@ app.post("/api/login", async (req, res) => {
         res.status(500).json({
             success: false,
             message: "خطای سرور"
+        });
+
+    }
+
+});
+
+
+// ==================================================
+// ================= FILE LIST =======================
+// ==================================================
+//
+// این API تمام فایل‌های داخل:
+//
+// files/2.127
+// files/CDNICON
+// files/files
+//
+// را پیدا می‌کند.
+//
+// APK ابتدا این لیست را می‌گیرد.
+// سپس فایل‌ها را یکی‌یکی دانلود می‌کند.
+//
+
+function getFilesRecursive(directory, baseDirectory, result) {
+
+    const items = fs.readdirSync(directory, {
+        withFileTypes: true
+    });
+
+    for (const item of items) {
+
+        const fullPath = path.join(
+            directory,
+            item.name
+        );
+
+        if (item.isDirectory()) {
+
+            getFilesRecursive(
+                fullPath,
+                baseDirectory,
+                result
+            );
+
+        } else {
+
+            const relativePath = path.relative(
+                baseDirectory,
+                fullPath
+            );
+
+            result.push(
+                relativePath.split(path.sep).join("/")
+            );
+
+        }
+
+    }
+
+}
+
+
+app.get("/api/files/list", (req, res) => {
+
+    try {
+
+        const filesDirectory = path.join(
+            __dirname,
+            "files"
+        );
+
+        if (!fs.existsSync(filesDirectory)) {
+
+            return res.status(404).json({
+                success: false,
+                message: "پوشه files روی سرور پیدا نشد"
+            });
+
+        }
+
+        const files = [];
+
+        getFilesRecursive(
+            filesDirectory,
+            filesDirectory,
+            files
+        );
+
+        res.json({
+            success: true,
+            count: files.length,
+            files: files
+        });
+
+    } catch (err) {
+
+        console.log("File List Error:", err);
+
+        res.status(500).json({
+            success: false,
+            message: "خطا در دریافت لیست فایل‌ها"
         });
 
     }
